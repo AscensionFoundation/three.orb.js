@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - io blender - vertex colors</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #eee;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #000;
+				margin: 0px;
+				padding: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+				color: #ffd802;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<div id="info"><a href="http://orbjs.org" target="_blank">three.orb.js</a> template - blank</div>
+
+		<script src="../build/three.orb.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script>
+
+			if ( document.location.hostname === "localhost" || document.location.hostname === "127.0.0.1" ) {
+
+				var script = document.createElement("script");
+				script.src = "js/libs/live.js";
+				script.type = "text/javascript";
+				document.getElementsByTagName("head")[0].appendChild(script);
+
+			}
+
+		</script>
+
+		<script>
+
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			init();
+
+			function init() {
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+
+			}
+
+		</script>
+
+	</body>
+</html>
