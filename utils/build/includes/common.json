@@ -2,6 +2,7 @@
 	"src/Three.js",
 	"src/Three.Orb.js",
 	"src/cameras/BlendCamera.js",
+	"src/geometries/RibbonGeometry.js",
 	"src/math/Matrix4.js",
 	"src/objects/Earth.js",
 	"src/objects/shaders/Constants.js",
