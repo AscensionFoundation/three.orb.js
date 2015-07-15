@@ -35222,3 +35222,148 @@ THREE.Matrix4.prototype.lerpMatrices = function( m1, m2, alpha ) {
 	return this;
 
 }
+// File:src/objects/Earth.js
+
+THREE.Earth = function ( camera ) {
+
+	THREE.Object3D.call( this );
+
+	this.type = 'Earth';
+	
+	this.camera = camera;
+	this.uniforms = THREE.UniformsUtils.clone( THREE.UniformsLib.earth );
+	this.uniforms.tDiffuse.value = THREE.ImageUtils.loadTexture( '../data/earth.color.jpg' );
+
+	// create terrain geometry
+	{
+		var geometry = new THREE.SphereGeometry( THREE.Constants.atmosphere.innerRadius, 100, 100 );
+		geometry = new THREE.BufferGeometry().fromGeometry( geometry );
+
+		var material = new THREE.ShaderMaterial({
+
+			uniforms:		this.uniforms,
+			vertexShader:	THREE.ShaderChunk [ 'earth_ground_vertex' ],
+			fragmentShader:	THREE.ShaderChunk [ 'earth_ground_fragment' ],
+
+			depthWrite: true,
+
+		});
+
+		var mesh = new THREE.Mesh( geometry, material );
+		mesh.name = 'terrain';
+
+		this.add( mesh );
+
+	};
+
+	// create sky geometry
+	{
+		var geometry = new THREE.SphereGeometry( THREE.Constants.atmosphere.outerRadius, 100, 100 );
+		geometry = new THREE.BufferGeometry().fromGeometry( geometry );
+
+		var material = new THREE.ShaderMaterial({
+
+			uniforms:		this.uniforms,
+			vertexShader:	THREE.ShaderChunk [ 'earth_atmosphere_vertex' ],
+			fragmentShader:	THREE.ShaderChunk [ 'earth_atmosphere_fragment' ],
+
+			side: THREE.BackSide,
+			transparent: true,
+			blending: THREE.AdditiveBlending
+
+		});
+
+		var mesh = new THREE.Mesh( geometry, material );
+		mesh.name = 'sky';
+
+		this.add( mesh );
+	};
+
+};
+
+THREE.Earth.prototype = Object.create( THREE.Object3D.prototype );
+THREE.Earth.prototype.constructor = THREE.Earth;
+
+THREE.Earth.prototype.updateMatrixWorld = function() {
+
+	THREE.Object3D.prototype.updateMatrixWorld.apply( this, arguments );
+
+	var cameraHeight = this.camera.position.length();
+
+	this.uniforms.v3LightPosition.value.set(0, 1, 0);
+	this.uniforms.fCameraHeight.value = cameraHeight;
+	this.uniforms.fCameraHeight2.value = cameraHeight * cameraHeight;
+
+}
+// File:src/objects/shaders/Constants.js
+
+THREE.Constants = {
+
+	atmosphere: {
+		
+		Kr				: 0.0025,
+		Km				: 0.0010,
+		ESun			: 20.0,
+		g				: -0.950,
+		wavelength		: [0.650, 0.570, 0.475],
+		scaleDepth		: 0.25,
+		mieScaleDepth	: 0.1,
+
+		innerRadius		: 100,
+		outerRadius		: 100 * 1.01
+
+	}
+
+}
+// File:src/objects/shaders/earth_atmosphere_fragment.glsl
+
+THREE.ShaderChunk[ 'earth_atmosphere_fragment' ] ="//\n// Atmospheric scattering fragment shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n\nuniform vec3 v3LightPos;\nuniform float g;\nuniform float g2;\n\nuniform float fMultiplier;\n\nvarying vec3 v3Direction;\nvarying vec3 c0;\nvarying vec3 c1;\n\n// Calculates the Mie phase function\nfloat getMiePhase(float fCos, float fCos2, float g, float g2)\n{\n\treturn 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCos2) / pow(1.0 + g2 - 2.0 * g * fCos, 1.5);\n}\n\n// Calculates the Rayleigh phase function\nfloat getRayleighPhase(float fCos2)\n{\n\treturn 0.75 + 0.75 * fCos2;\n}\n\nvoid main (void)\n{\n\tfloat fCos = dot(v3LightPos, v3Direction) / length(v3Direction);\n\tfloat fCos2 = fCos * fCos;\n\n\tvec3 color =\tgetRayleighPhase(fCos2) * c0 +\n\t\t\t\t\tgetMiePhase(fCos, fCos2, g, g2) * c1;\n\n \tgl_FragColor = vec4(fMultiplier * fMultiplier * color, 1.0);\n\tgl_FragColor.a = gl_FragColor.b;\n}";
+
+// File:src/objects/shaders/earth_atmosphere_vertex.glsl
+
+THREE.ShaderChunk[ 'earth_atmosphere_vertex' ] ="//\n// Atmospheric scattering vertex shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n\nuniform vec3 v3LightPosition;\t// The direction vector to the light source\nuniform vec3 v3InvWavelength;\t// 1 / pow(wavelength, 4) for the red, green, and blue channels\nuniform float fCameraHeight;\t// The camera's current height\nuniform float fCameraHeight2;\t// fCameraHeight^2\nuniform float fOuterRadius;\t\t// The outer (atmosphere) radius\nuniform float fOuterRadius2;\t// fOuterRadius^2\nuniform float fInnerRadius;\t\t// The inner (planetary) radius\nuniform float fInnerRadius2;\t// fInnerRadius^2\nuniform float fKrESun;\t\t\t// Kr * ESun\nuniform float fKmESun;\t\t\t// Km * ESun\nuniform float fKr4PI;\t\t\t// Kr * 4 * PI\nuniform float fKm4PI;\t\t\t// Km * 4 * PI\nuniform float fScale;\t\t\t// 1 / (fOuterRadius - fInnerRadius)\nuniform float fScaleDepth;\t\t// The scale depth (i.e. the altitude at which the atmosphere's average density is found)\nuniform float fScaleOverScaleDepth;\t// fScale / fScaleDepth\n\nconst int nSamples = 3;\nconst float fSamples = 3.0;\n\nvarying vec3 v3Direction;\nvarying vec3 c0;\nvarying vec3 c1;\n\n\nfloat scale(float fCos)\n{\n\tfloat x = 1.0 - fCos;\n\treturn fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));\n}\n\nvoid main(void)\n{\n\t// Get the ray from the camera to the vertex and its length (which is the far point of the ray passing through the atmosphere)\n\tvec3 v3Ray = position - cameraPosition;\n\tfloat fFar = length(v3Ray);\n\tv3Ray /= fFar;\n\n\t// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)\n\tfloat B = 2.0 * dot(cameraPosition, v3Ray);\n\tfloat C = fCameraHeight2 - fOuterRadius2;\n\tfloat fDet = max(0.0, B*B - 4.0 * C);\n\tfloat fNear = 0.5 * (-B - sqrt(fDet));\n\n\t// Calculate the ray's starting position, then calculate its scattering offset\n\tvec3 v3Start = cameraPosition + v3Ray * fNear;\n\tfFar -= fNear;\n\tfloat fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;\n\tfloat fStartDepth = exp(-1.0 / fScaleDepth);\n\tfloat fStartOffset = fStartDepth * scale(fStartAngle);\n\t//c0 = vec3(1.0, 0, 0) * fStartAngle;\n\n\t// Initialize the scattering loop variables\n\tfloat fSampleLength = fFar / fSamples;\n\tfloat fScaledLength = fSampleLength * fScale;\n\tvec3 v3SampleRay = v3Ray * fSampleLength;\n\tvec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;\n\n\t//gl_FrontColor = vec4(0.0, 0.0, 0.0, 0.0);\n\n\t// Now loop through the sample rays\n\tvec3 v3FrontColor = vec3(0.0, 0.0, 0.0);\n\tfor(int i=0; i<nSamples; i++)\n\t{\n\t\tfloat fHeight = length(v3SamplePoint);\n\t\tfloat fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));\n\t\tfloat fLightAngle = dot(v3LightPosition, v3SamplePoint) / fHeight;\n\t\tfloat fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;\n\t\tfloat fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));\n\t\tvec3 v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));\n\n\t\tv3FrontColor += v3Attenuate * (fDepth * fScaledLength);\n\t\tv3SamplePoint += v3SampleRay;\n\t}\n\n\t// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\tc0 = v3FrontColor * (v3InvWavelength * fKrESun);\n\tc1 = v3FrontColor * fKmESun;\n\tv3Direction = cameraPosition - position;\n}";
+
+// File:src/objects/shaders/earth_ground_fragment.glsl
+
+THREE.ShaderChunk[ 'earth_ground_fragment' ] ="//\n// Atmospheric scattering fragment shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n// Ported for use with three.js/WebGL by James Baicoianu\n\n//uniform sampler2D s2Tex1;\n//uniform sampler2D s2Tex2;\n\nuniform float fNightScale;\nuniform vec3 v3LightPosition;\nuniform sampler2D tDiffuse;\n//uniform sampler2D tDiffuseNight;\n//uniform sampler2D tClouds;\n\nuniform float fMultiplier;\n\nvarying vec3 c0;\nvarying vec3 c1;\nvarying vec3 vNormal;\nvarying vec2 vUv;\n\nvoid main (void)\n{\n\t//gl_FragColor = vec4(c0, 1.0);\n\t//gl_FragColor = vec4(0.25 * c0, 1.0);\n\t//gl_FragColor = gl_Color + texture2D(s2Tex1, gl_TexCoord[0].st) * texture2D(s2Tex2, gl_TexCoord[1].st) * gl_SecondaryColor;\n\tfloat phong = max(dot(normalize(-vNormal), normalize(v3LightPosition)), 0.0);\n\n\tvec3 diffuseTex = texture2D( tDiffuse, vUv ).xyz;\n\t//vec3 diffuseNightTex = texture2D( tDiffuseNight, vUv ).xyz;\n\n\t//diffuseTex = vec3(0.0);\n\t//diffuseNightTex = vec3(0.0);\n\t//vec3 cloudsTex = texture2D( tClouds, vUv ).xyz;\n\n\t//vec3 day = max( diffuseTex, cloudsTex ) * c0;\n\t//vec3 night = fNightScale * (0.7 * pow(diffuseNightTex, vec3(3)) + 0.3 * diffuseNightTex) * (1.0 - c0) * phong * (1.0 - cloudsTex);\n\n\n\n\t// specular\n\t//vec3 r = reflect( -normalize(v3LightPosition), normalize(vNormal) );\n\t//float specular =  0.2 * pow(max(dot(r, normalize(cameraPosition)), 0.0), 3.0);\n\n\n\n\n\n\t//gl_FragColor = vec4(c1, 1.0) + vec4(day + night, 1.0);\n\n\t//gl_FragColor = vec4(fMultiplier * (c1 + day + night), 1.0);\n\tgl_FragColor = vec4(c1 + c0 * diffuseTex, 1.0);\n\t//gl_FragColor.r += specular;\n\t//gl_FragColor.rg += vUv.xy;\n\n}";
+
+// File:src/objects/shaders/earth_ground_vertex.glsl
+
+THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering vertex shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n// Ported for use with three.js/WebGL by James Baicoianu\n\nuniform vec3 v3LightPosition;\t\t// The direction vector to the light source\nuniform vec3 v3InvWavelength;\t// 1 / pow(wavelength, 4) for the red, green, and blue channels\nuniform float fCameraHeight;\t// The camera's current height\nuniform float fCameraHeight2;\t// fCameraHeight^2\nuniform float fOuterRadius;\t\t// The outer (atmosphere) radius\nuniform float fOuterRadius2;\t// fOuterRadius^2\nuniform float fInnerRadius;\t\t// The inner (planetary) radius\nuniform float fInnerRadius2;\t// fInnerRadius^2\nuniform float fKrESun;\t\t\t// Kr * ESun\nuniform float fKmESun;\t\t\t// Km * ESun\nuniform float fKr4PI;\t\t\t// Kr * 4 * PI\nuniform float fKm4PI;\t\t\t// Km * 4 * PI\nuniform float fScale;\t\t\t// 1 / (fOuterRadius - fInnerRadius)\nuniform float fScaleDepth;\t\t// The scale depth (i.e. the altitude at which the atmosphere's average density is found)\nuniform float fScaleOverScaleDepth;\t// fScale / fScaleDepth\nuniform sampler2D tDiffuse;\n\nvarying vec3 c0;\nvarying vec3 c1;\nvarying vec3 vNormal;\nvarying vec2 vUv;\n\nconst int nSamples = 3;\nconst float fSamples = 3.0;\n\nfloat scale(float fCos)\n{\n\tfloat x = 1.0 - fCos;\n\treturn fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));\n}\n\nvoid main(void)\n{\n\t// Get the ray from the camera to the vertex and its length (which is the far point of the ray passing through the atmosphere)\n\tvec3 v3Ray = position - cameraPosition;\n\tfloat fFar = length(v3Ray);\n\tv3Ray /= fFar;\n\n\t// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)\n\tfloat B = 2.0 * dot(cameraPosition, v3Ray);\n\tfloat C = fCameraHeight2 - fOuterRadius2;\n\tfloat fDet = max(0.0, B*B - 4.0 * C);\n\tfloat fNear = 0.5 * (-B - sqrt(fDet));\n\n\t// Calculate the ray's starting position, then calculate its scattering offset\n\tvec3 v3Start = cameraPosition + v3Ray * fNear;\n\tfFar -= fNear;\n\tfloat fDepth = exp((fInnerRadius - fOuterRadius) / fScaleDepth);\n\tfloat fCameraAngle = dot(-v3Ray, position) / length(position);\n\tfloat fLightAngle = dot(v3LightPosition, position) / length(position);\n\tfloat fCameraScale = scale(fCameraAngle);\n\tfloat fLightScale = scale(fLightAngle);\n\tfloat fCameraOffset = fDepth*fCameraScale;\n\tfloat fTemp = (fLightScale + fCameraScale);\n\n\t// Initialize the scattering loop variables\n\tfloat fSampleLength = fFar / fSamples;\n\tfloat fScaledLength = fSampleLength * fScale;\n\tvec3 v3SampleRay = v3Ray * fSampleLength;\n\tvec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;\n\n\t// Now loop through the sample rays\n\tvec3 v3FrontColor = vec3(0.0, 0.0, 0.0);\n\tvec3 v3Attenuate;\n\tfor(int i=0; i<nSamples; i++)\n\t{\n\t\tfloat fHeight = length(v3SamplePoint);\n\t\tfloat fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));\n\t\tfloat fScatter = fDepth*fTemp - fCameraOffset;\n\t\tv3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));\n\t\tv3FrontColor += v3Attenuate * (fDepth * fScaledLength);\n\t\tv3SamplePoint += v3SampleRay;\n\t}\n\n\t// Calculate the attenuation factor for the ground\n\tc0 = v3Attenuate;\n\tc1 = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\t//gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n\t//gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n\tvUv = uv;\n\tvNormal = normal;\n}";
+
+// File:src/objects/shaders/UniformsLib.js
+
+THREE.UniformsLib.earth = {
+
+		"v3LightPosition"		: { type: "v3", value: new THREE.Vector3(1e8, 0, 1e8).normalize() },
+		"v3InvWavelength"		: { type: "v3", value: new THREE.Vector3(1 / Math.pow(THREE.Constants.atmosphere.wavelength[0], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[1], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[2], 4)) },
+
+		"fCameraHeight"			: { type: "f", value: 0 },
+		"fCameraHeight2"		: { type: "f", value: 0 },
+
+		"fInnerRadius"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius },
+		"fInnerRadius2"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius * THREE.Constants.atmosphere.innerRadius },
+		"fOuterRadius"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius },
+		"fOuterRadius2"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius * THREE.Constants.atmosphere.outerRadius },
+
+		"fKrESun"				: { type: "f", value: THREE.Constants.atmosphere.Kr * THREE.Constants.atmosphere.ESun },
+		"fKmESun"				: { type: "f", value: THREE.Constants.atmosphere.Km * THREE.Constants.atmosphere.ESun },
+		"fKr4PI"				: { type: "f", value: THREE.Constants.atmosphere.Kr * 4.0 * Math.PI },
+		"fKm4PI"				: { type: "f", value: THREE.Constants.atmosphere.Km * 4.0 * Math.PI },
+
+		"fScale"				: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) },
+		"fScaleDepth"			: { type: "f", value: THREE.Constants.atmosphere.scaleDepth },
+		"fScaleOverScaleDepth"	: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) / THREE.Constants.atmosphere.scaleDepth },
+
+		"g"						: { type: "f", value: THREE.Constants.atmosphere.g },
+		"g2"					: { type: "f", value: THREE.Constants.atmosphere.g * THREE.Constants.atmosphere.g },
+
+		"nSamples"				: { type: "i", value: 3 },
+		"fSamples"				: { type: "f", value: 3.0 },
+		"tDiffuse"				: { type: "t", value: undefined },
+		"tDiffuseNight"			: { type: "t", value: undefined },
+		"tClouds"				: { type: "t", value: null },
+		"fNightScale"			: { type: "f", value: 1 },
+		"fMultiplier"			: { type: "f", value: 1 },
+
+}

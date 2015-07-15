@@ -2,5 +2,12 @@
 	"src/Three.js",
 	"src/Three.Orb.js",
 	"src/cameras/BlendCamera.js",
-	"src/math/Matrix4.js"
+	"src/math/Matrix4.js",
+	"src/objects/Earth.js",
+	"src/objects/shaders/Constants.js",
+	"src/objects/shaders/earth_atmosphere_fragment.glsl",
+	"src/objects/shaders/earth_atmosphere_vertex.glsl",
+	"src/objects/shaders/earth_ground_fragment.glsl",
+	"src/objects/shaders/earth_ground_vertex.glsl",
+	"src/objects/shaders/UniformsLib.js"
 ]
