@@ -1,4 +1,6 @@
 [
 	"src/Three.js",
-	"src/Three.Orb.js"
+	"src/Three.Orb.js",
+	"src/cameras/BlendCamera.js",
+	"src/math/Matrix4.js"
 ]
