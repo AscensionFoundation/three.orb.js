@@ -24,7 +24,7 @@
     "scripts": {
         "watch": "watch ./build.sh ../../src",
         "watch-win": "watch ./build.bat ../../src",
-        "http-server": "http-server ../../ -c-1"
+        "http-server": "http-server ../../ -c-1 -s -o"
     },
 
     "licenses": [{
