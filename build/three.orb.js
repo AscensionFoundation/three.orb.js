@@ -35235,9 +35235,9 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	THREE.BufferGeometry.call( this );
 
-	this.positions = new Float32Array( segments * 3 * 6 );
-	this.normals = new Float32Array( segments * 3 * 6 );
-	this.uvs = new Float32Array( segments * 2 * 6 );
+	this.positions = new Float32Array( segments * 3 * 2 );
+	this.normals = new Float32Array( segments * 3 * 2 );
+	this.uvs = new Float32Array( segments * 2 * 2 );
 	this.addAttribute( 'position', new THREE.DynamicBufferAttribute( this.positions, 3 ) );
 	this.addAttribute( 'normal', new THREE.DynamicBufferAttribute( this.normals, 3 ) );
 	this.addAttribute( 'uv', new THREE.DynamicBufferAttribute( this.uvs, 2 ) );
@@ -35246,12 +35246,8 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	for ( var i = 0; i < segments; ++i ) {
 
-		this.uvs[ i * 12 + 0 ] = 1;
-		this.uvs[ i * 12 + 2 ] = 1;
-		this.uvs[ i * 12 + 4 ] = -1;
-		this.uvs[ i * 12 + 6 ] = 1;
-		this.uvs[ i * 12 + 8 ] = -1;
-		this.uvs[ i * 12 + 10 ] = -1;
+		this.uvs[ i * 4 + 0 ] = 1;
+		this.uvs[ i * 4 + 2 ] = -1;
 
 	}
 
@@ -35272,26 +35268,19 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 	var t = this.temp;
 	t.set(x, y, z).sub(this.previous);
 
-	normals[ v * 18 +  3 ] = t.x;
-	normals[ v * 18 +  4 ] = t.y;
-	normals[ v * 18 +  5 ] = t.z;
-	positions[ v * 18 +  3 ] = x;
-	positions[ v * 18 +  4 ] = y;
-	positions[ v * 18 +  5 ] = z;
+	normals[ v * 6 +  0 ] = t.x;
+	normals[ v * 6 +  1 ] = t.y;
+	normals[ v * 6 +  2 ] = t.z;
+	normals[ v * 6 +  3 ] = t.x;
+	normals[ v * 6 +  4 ] = t.y;
+	normals[ v * 6 +  5 ] = t.z;
 
-	normals[ v * 18 +  9 ] = t.x;
-	normals[ v * 18 + 10 ] = t.y;
-	normals[ v * 18 + 11 ] = t.z;
-	positions[ v * 18 +  9 ] = x;
-	positions[ v * 18 + 10 ] = y;
-	positions[ v * 18 + 11 ] = z;
-
-	normals[ v * 18 + 15 ] = t.x;
-	normals[ v * 18 + 16 ] = t.y;
-	normals[ v * 18 + 17 ] = t.z;
-	positions[ v * 18 + 15 ] = x;
-	positions[ v * 18 + 16 ] = y;
-	positions[ v * 18 + 17 ] = z;
+	positions[ v * 6 + 0 ] = x;
+	positions[ v * 6 + 1 ] = y;
+	positions[ v * 6 + 2 ] = z;
+	positions[ v * 6 + 3 ] = x;
+	positions[ v * 6 + 4 ] = y;
+	positions[ v * 6 + 5 ] = z;
 
 	v = v + 1;
 
@@ -35301,38 +35290,12 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	}
 
-	normals[ v * 18 +  0 ] = t.x;
-	normals[ v * 18 +  1 ] = t.y;
-	normals[ v * 18 +  2 ] = t.z;
-	positions[ v * 18 +  0 ] = x;
-	positions[ v * 18 +  1 ] = y;
-	positions[ v * 18 +  2 ] = z;
-
-	normals[ v * 18 +  6 ] = t.x;
-	normals[ v * 18 +  7 ] = t.y;
-	normals[ v * 18 +  8 ] = t.z;
-	positions[ v * 18 +  6 ] = x;
-	positions[ v * 18 +  7 ] = y;
-	positions[ v * 18 +  8 ] = z;
-
-	normals[ v * 18 +  12 ] = t.x;
-	normals[ v * 18 +  13 ] = t.y;
-	normals[ v * 18 +  14 ] = t.z;
-	positions[ v * 18 + 12 ] = x;
-	positions[ v * 18 + 13 ] = y;
-	positions[ v * 18 + 14 ] = z;
-
-	positions[ v * 18 +  3 ] = NaN;
-	positions[ v * 18 +  4 ] = NaN;
-	positions[ v * 18 +  5 ] = NaN;
-
-	positions[ v * 18 +  9 ] = NaN;
-	positions[ v * 18 + 10 ] = NaN;
-	positions[ v * 18 + 11 ] = NaN;
-
-	positions[ v * 18 + 15 ] = NaN;
-	positions[ v * 18 + 16 ] = NaN;
-	positions[ v * 18 + 17 ] = NaN;
+	positions[ v * 6 + 0 ] = NaN;
+	positions[ v * 6 + 1 ] = NaN;
+	positions[ v * 6 + 2 ] = NaN;
+	positions[ v * 6 + 3 ] = NaN;
+	positions[ v * 6 + 4 ] = NaN;
+	positions[ v * 6 + 5 ] = NaN;
 
 	this.index = v;
 	this.attributes.position.needsUpdate = true;
@@ -35511,6 +35474,14 @@ THREE.ShaderChunk[ 'earth_ground_fragment' ] ="//\n// Atmospheric scattering fra
 // File:src/objects/shaders/earth_ground_vertex.glsl
 
 THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering vertex shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n// Ported for use with three.js/WebGL by James Baicoianu\n\nuniform vec3 v3LightPosition;\t\t// The direction vector to the light source\nuniform vec3 v3InvWavelength;\t// 1 / pow(wavelength, 4) for the red, green, and blue channels\nuniform float fCameraHeight;\t// The camera's current height\nuniform float fCameraHeight2;\t// fCameraHeight^2\nuniform float fOuterRadius;\t\t// The outer (atmosphere) radius\nuniform float fOuterRadius2;\t// fOuterRadius^2\nuniform float fInnerRadius;\t\t// The inner (planetary) radius\nuniform float fInnerRadius2;\t// fInnerRadius^2\nuniform float fKrESun;\t\t\t// Kr * ESun\nuniform float fKmESun;\t\t\t// Km * ESun\nuniform float fKr4PI;\t\t\t// Kr * 4 * PI\nuniform float fKm4PI;\t\t\t// Km * 4 * PI\nuniform float fScale;\t\t\t// 1 / (fOuterRadius - fInnerRadius)\nuniform float fScaleDepth;\t\t// The scale depth (i.e. the altitude at which the atmosphere's average density is found)\nuniform float fScaleOverScaleDepth;\t// fScale / fScaleDepth\nuniform sampler2D tDiffuse;\n\nvarying vec3 c0;\nvarying vec3 c1;\nvarying vec3 vNormal;\nvarying vec2 vUv;\n\nconst int nSamples = 3;\nconst float fSamples = 3.0;\n\nfloat scale(float fCos)\n{\n\tfloat x = 1.0 - fCos;\n\treturn fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));\n}\n\nvoid main(void)\n{\n\t// Get the ray from the camera to the vertex and its length (which is the far point of the ray passing through the atmosphere)\n\tvec3 v3Ray = position - cameraPosition;\n\tfloat fFar = length(v3Ray);\n\tv3Ray /= fFar;\n\n\t// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)\n\tfloat B = 2.0 * dot(cameraPosition, v3Ray);\n\tfloat C = fCameraHeight2 - fOuterRadius2;\n\tfloat fDet = max(0.0, B*B - 4.0 * C);\n\tfloat fNear = 0.5 * (-B - sqrt(fDet));\n\n\t// Calculate the ray's starting position, then calculate its scattering offset\n\tvec3 v3Start = cameraPosition + v3Ray * fNear;\n\tfFar -= fNear;\n\tfloat fDepth = exp((fInnerRadius - fOuterRadius) / fScaleDepth);\n\tfloat fCameraAngle = dot(-v3Ray, position) / length(position);\n\tfloat fLightAngle = dot(v3LightPosition, position) / length(position);\n\tfloat fCameraScale = scale(fCameraAngle);\n\tfloat fLightScale = scale(fLightAngle);\n\tfloat fCameraOffset = fDepth*fCameraScale;\n\tfloat fTemp = (fLightScale + fCameraScale);\n\n\t// Initialize the scattering loop variables\n\tfloat fSampleLength = fFar / fSamples;\n\tfloat fScaledLength = fSampleLength * fScale;\n\tvec3 v3SampleRay = v3Ray * fSampleLength;\n\tvec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;\n\n\t// Now loop through the sample rays\n\tvec3 v3FrontColor = vec3(0.0, 0.0, 0.0);\n\tvec3 v3Attenuate;\n\tfor(int i=0; i<nSamples; i++)\n\t{\n\t\tfloat fHeight = length(v3SamplePoint);\n\t\tfloat fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));\n\t\tfloat fScatter = fDepth*fTemp - fCameraOffset;\n\t\tv3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));\n\t\tv3FrontColor += v3Attenuate * (fDepth * fScaledLength);\n\t\tv3SamplePoint += v3SampleRay;\n\t}\n\n\t// Calculate the attenuation factor for the ground\n\tc0 = v3Attenuate;\n\tc1 = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\t//gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n\t//gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n\tvUv = uv;\n\tvNormal = normal;\n}";
+
+// File:src/objects/shaders/earth_unwrap_fragment.glsl
+
+THREE.ShaderChunk[ 'earth_unwrap_fragment' ] ="uniform sampler2D texture;\n\nvarying vec2 v_uv;\n\nvoid main(void) {\n\n\tvec3 diffuse = texture2D( texture, v_uv ).xyz;\n\n\t// gl_FragColor = vec4(v_uv.x, v_uv.y, 1.0, 1.0);\n\tgl_FragColor = vec4( diffuse, 1.0);\n}";
+
+// File:src/objects/shaders/earth_unwrap_vertex.glsl
+
+THREE.ShaderChunk[ 'earth_unwrap_vertex' ] ="uniform float alpha;\nvarying vec2 v_uv;\n\n/*\ndef geographic_to_web_mercator(x_lon, y_lat):\nif abs(x_lon) <= 180 and abs(y_lat) < 90:\n\tnum = x_lon * 0.017453292519943295\n\tx = 6378137.0 * num\n\ta = y_lat * 0.017453292519943295\n\tx_mercator = x\n\ty_mercator = 3189068.5 * log((1.0 + math.sin(a)) / (1.0 - math.sin(a)))         \n\treturn x_mercator, y_mercator\nelse:\n\tprint('Invalid coordinate values for conversion')        \n*/\n\nvoid main(void) {\n\n\tvec3 pos = position;\n\tfloat len = length( position );\n\n\tfloat cameraLength = length( cameraPosition );\n\tvec3 center = cameraPosition / cameraLength * len;\n\n\tfloat dp = dot( cameraPosition, position ) / len / cameraLength;\n\tfloat arc = acos( dp ) * len;\n\n\tvec3 up = cross( cameraPosition - position, center - position );\n\tvec3 perp = normalize(cross( cameraPosition - position, up ));\n\n\tvec3 proj = center + perp * arc;\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( mix( proj, position, alpha ) , 1.0 );\n\n\tv_uv = uv;\n}";
 
 // File:src/objects/shaders/line_ribbon_fragment.glsl
 
