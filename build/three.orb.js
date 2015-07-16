@@ -15323,7 +15323,7 @@ THREE.Line.prototype.clone = function ( object ) {
  * @author jonobr1 / http://jonobr1.com/
  */
 
-THREE.Mesh = function ( geometry, material ) {
+THREE.Mesh = function ( geometry, material, mode ) {
 
 	THREE.Object3D.call( this );
 
@@ -15332,9 +15332,15 @@ THREE.Mesh = function ( geometry, material ) {
 	this.geometry = geometry !== undefined ? geometry : new THREE.Geometry();
 	this.material = material !== undefined ? material : new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } );
 
+	this.mode = mode !== undefined ? mode : THREE.TrianglePieces;
+
 	this.updateMorphTargets();
 
 };
+
+THREE.TrianglePieces = 0;
+THREE.TriangleStrip = 1;
+THREE.TriangleFan = 2;
 
 THREE.Mesh.prototype = Object.create( THREE.Object3D.prototype );
 THREE.Mesh.prototype.constructor = THREE.Mesh;
@@ -20313,7 +20319,31 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( object instanceof THREE.Mesh ) {
 
-			var mode = material.wireframe === true ? _gl.LINES : _gl.TRIANGLES;
+			var mode, faces;
+
+			if ( material.wireframe === true ) {
+
+				mode = _gl.LINES;
+
+			} else {
+
+				switch ( object.mode ) {
+
+					case THREE.TrianglePieces:
+						mode = _gl.TRIANGLES;
+						break;
+
+					case THREE.TriangleStrip:
+						mode = _gl.TRIANGLE_STRIP;
+						break;
+
+					case THREE.TriangleFan:
+						mode = _gl.TRIANGLE_FAN;
+						break;
+
+				}
+
+			}
 
 			var index = geometry.attributes.index;
 
@@ -35133,6 +35163,7 @@ THREE.MorphBlendMesh.prototype.update = function ( delta ) {
 
 };
 
+
 // File:src/Three.Orb.js
 
 THREE.ORB_REVISION = '1';
@@ -35409,7 +35440,7 @@ THREE.Earth.prototype.updateMatrixWorld = function() {
 
 THREE.LineRibbon = function( geometry, material ) {
 
-	THREE.Mesh.call( this );
+	THREE.Mesh.call( this, geometry, material, THREE.TriangleStrip );
 	
 	this.attributes = {
 
@@ -35483,11 +35514,11 @@ THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering verte
 
 // File:src/objects/shaders/line_ribbon_fragment.glsl
 
-THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(1.0, c, 0, 1.0);\n\n}";
+THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n\n}";
 
 // File:src/objects/shaders/line_ribbon_vertex.glsl
 
-THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\n\nvarying float c;\n\nvoid main(void) {\n\n\tvec3 cam = cross(cameraPosition - position, normal);\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\tvec2 dir = normalize( nor.xy );\n\n\tvec4 pos = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\tc = 1.;//pos.w;\n\tpos.x += uv.x * pos.w * 1. / targetSize.x * dir.x;\n\tpos.y += uv.x * pos.w * 1. / targetSize.y * dir.y;\n\t//pos.x += 0.5;\n\tgl_Position = pos;\n\n}";
+THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\n\nvarying float c;\n\nvoid main(void) {\n\n\t// perpendicular vector the the line from the camera's perspective\n\tvec3 cam = cross(cameraPosition - position, normal);\n\n\t// project into clip space\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\n\t// normalize into a screen space direction\n\tvec2 dir = normalize( nor.xy );\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t// extrude the lines by the half the pixel with to each direction\n\tgl_Position.xy += uv.x * gl_Position.w * 4. / targetSize * dir;\n\n}";
 
 // File:src/objects/shaders/UniformsLib.js
 

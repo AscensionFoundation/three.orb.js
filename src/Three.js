@@ -15321,7 +15321,7 @@ THREE.Line.prototype.clone = function ( object ) {
  * @author jonobr1 / http://jonobr1.com/
  */
 
-THREE.Mesh = function ( geometry, material ) {
+THREE.Mesh = function ( geometry, material, mode ) {
 
 	THREE.Object3D.call( this );
 
@@ -15330,9 +15330,15 @@ THREE.Mesh = function ( geometry, material ) {
 	this.geometry = geometry !== undefined ? geometry : new THREE.Geometry();
 	this.material = material !== undefined ? material : new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } );
 
+	this.mode = mode !== undefined ? mode : THREE.TrianglePieces;
+
 	this.updateMorphTargets();
 
 };
+
+THREE.TrianglePieces = 0;
+THREE.TriangleStrip = 1;
+THREE.TriangleFan = 2;
 
 THREE.Mesh.prototype = Object.create( THREE.Object3D.prototype );
 THREE.Mesh.prototype.constructor = THREE.Mesh;
@@ -20311,7 +20317,31 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( object instanceof THREE.Mesh ) {
 
-			var mode = material.wireframe === true ? _gl.LINES : _gl.TRIANGLES;
+			var mode, faces;
+
+			if ( material.wireframe === true ) {
+
+				mode = _gl.LINES;
+
+			} else {
+
+				switch ( object.mode ) {
+
+					case THREE.TrianglePieces:
+						mode = _gl.TRIANGLES;
+						break;
+
+					case THREE.TriangleStrip:
+						mode = _gl.TRIANGLE_STRIP;
+						break;
+
+					case THREE.TriangleFan:
+						mode = _gl.TRIANGLE_FAN;
+						break;
+
+				}
+
+			}
 
 			var index = geometry.attributes.index;
 
@@ -35130,3 +35160,4 @@ THREE.MorphBlendMesh.prototype.update = function ( delta ) {
 	}
 
 };
+

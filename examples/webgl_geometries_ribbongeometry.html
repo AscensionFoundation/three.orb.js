@@ -110,10 +110,12 @@
 
 			function onDocumentMouseMove(event) {
 
+				var r = Date.now() * 0.0005;
+
 				mouseX = ( event.clientX - windowHalfX ) / 10;
 				mouseY = ( event.clientY - windowHalfY ) / 10;
 
-				geometry.advance( mouseX, -mouseY, 0)
+				geometry.advance( mouseX, -mouseY, Math.sin(r) * 100 );
 
 			}
 

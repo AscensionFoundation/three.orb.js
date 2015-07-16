@@ -4,16 +4,18 @@ varying float c;
 
 void main(void) {
 
+	// perpendicular vector the the line from the camera's perspective
 	vec3 cam = cross(cameraPosition - position, normal);
+
+	// project into clip space
 	vec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );
+
+	// normalize into a screen space direction
 	vec2 dir = normalize( nor.xy );
 
-	vec4 pos = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
-	c = 1.;//pos.w;
-	pos.x += uv.x * pos.w * 1. / targetSize.x * dir.x;
-	pos.y += uv.x * pos.w * 1. / targetSize.y * dir.y;
-	//pos.x += 0.5;
-	gl_Position = pos;
+	// extrude the lines by the half the pixel with to each direction
+	gl_Position.xy += uv.x * gl_Position.w * 4. / targetSize * dir;
 
 }

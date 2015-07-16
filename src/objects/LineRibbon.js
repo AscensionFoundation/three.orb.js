@@ -1,6 +1,6 @@
 THREE.LineRibbon = function( geometry, material ) {
 
-	THREE.Mesh.call( this );
+	THREE.Mesh.call( this, geometry, material, THREE.TriangleStrip );
 	
 	this.attributes = {
 
