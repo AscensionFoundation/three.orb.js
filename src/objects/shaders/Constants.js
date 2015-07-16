@@ -15,4 +15,4 @@ THREE.Constants = {
 
 	}
 
-}
+};

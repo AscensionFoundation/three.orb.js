@@ -35205,7 +35205,24 @@ THREE.RibbonGeometry = function( segments, duration ) {
 	THREE.BufferGeometry.call( this );
 
 	this.positions = new Float32Array( segments * 3 * 6 );
+	this.normals = new Float32Array( segments * 3 * 6 );
+	this.uvs = new Float32Array( segments * 2 * 6 );
 	this.addAttribute( 'position', new THREE.DynamicBufferAttribute( this.positions, 3 ) );
+	this.addAttribute( 'normal', new THREE.DynamicBufferAttribute( this.normals, 3 ) );
+	this.addAttribute( 'uv', new THREE.DynamicBufferAttribute( this.uvs, 2 ) );
+	this.previous = new THREE.Vector3();
+	this.temp = new THREE.Vector3();
+
+	for ( var i = 0; i < segments; ++i ) {
+
+		this.uvs[ i * 12 + 0 ] = 1;
+		this.uvs[ i * 12 + 2 ] = 1;
+		this.uvs[ i * 12 + 4 ] = -1;
+		this.uvs[ i * 12 + 6 ] = 1;
+		this.uvs[ i * 12 + 8 ] = -1;
+		this.uvs[ i * 12 + 10 ] = -1;
+
+	}
 
 	this.segments = segments;
 	this.duration = duration;
@@ -35219,19 +35236,31 @@ THREE.RibbonGeometry.prototype.constructor = THREE.RibbonGeometry;
 THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	var positions = this.positions;
+	var normals = this.normals;
 	var v = this.index;
+	var t = this.temp;
+	t.set(x, y, z).sub(this.previous);
 
+	normals[ v * 18 +  3 ] = t.x;
+	normals[ v * 18 +  4 ] = t.y;
+	normals[ v * 18 +  5 ] = t.z;
 	positions[ v * 18 +  3 ] = x;
 	positions[ v * 18 +  4 ] = y;
 	positions[ v * 18 +  5 ] = z;
 
-	positions[ v * 18 + 12 ] = x;
-	positions[ v * 18 + 13 ] = y;
-	positions[ v * 18 + 14 ] = z;
+	normals[ v * 18 +  9 ] = t.x;
+	normals[ v * 18 + 10 ] = t.y;
+	normals[ v * 18 + 11 ] = t.z;
+	positions[ v * 18 +  9 ] = x;
+	positions[ v * 18 + 10 ] = y;
+	positions[ v * 18 + 11 ] = z;
 
+	normals[ v * 18 + 15 ] = t.x;
+	normals[ v * 18 + 16 ] = t.y;
+	normals[ v * 18 + 17 ] = t.z;
 	positions[ v * 18 + 15 ] = x;
 	positions[ v * 18 + 16 ] = y;
-	positions[ v * 18 + 17 ] = z + 10;
+	positions[ v * 18 + 17 ] = z;
 
 	v = v + 1;
 
@@ -35241,25 +35270,34 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	}
 
+	normals[ v * 18 +  0 ] = t.x;
+	normals[ v * 18 +  1 ] = t.y;
+	normals[ v * 18 +  2 ] = t.z;
 	positions[ v * 18 +  0 ] = x;
 	positions[ v * 18 +  1 ] = y;
 	positions[ v * 18 +  2 ] = z;
 
+	normals[ v * 18 +  6 ] = t.x;
+	normals[ v * 18 +  7 ] = t.y;
+	normals[ v * 18 +  8 ] = t.z;
 	positions[ v * 18 +  6 ] = x;
 	positions[ v * 18 +  7 ] = y;
-	positions[ v * 18 +  8 ] = z + 10;
+	positions[ v * 18 +  8 ] = z;
 
-	positions[ v * 18 +  9 ] = x;
-	positions[ v * 18 + 10 ] = y;
-	positions[ v * 18 + 11 ] = z + 10;
+	normals[ v * 18 +  12 ] = t.x;
+	normals[ v * 18 +  13 ] = t.y;
+	normals[ v * 18 +  14 ] = t.z;
+	positions[ v * 18 + 12 ] = x;
+	positions[ v * 18 + 13 ] = y;
+	positions[ v * 18 + 14 ] = z;
 
 	positions[ v * 18 +  3 ] = NaN;
 	positions[ v * 18 +  4 ] = NaN;
 	positions[ v * 18 +  5 ] = NaN;
 
-	positions[ v * 18 + 12 ] = NaN;
-	positions[ v * 18 + 13 ] = NaN;
-	positions[ v * 18 + 14 ] = NaN;
+	positions[ v * 18 +  9 ] = NaN;
+	positions[ v * 18 + 10 ] = NaN;
+	positions[ v * 18 + 11 ] = NaN;
 
 	positions[ v * 18 + 15 ] = NaN;
 	positions[ v * 18 + 16 ] = NaN;
@@ -35267,6 +35305,8 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	this.index = v;
 	this.attributes.position.needsUpdate = true;
+	this.attributes.normal.needsUpdate = true;
+	this.previous.set( x, y, z );
 }
 // File:src/math/Matrix4.js
 
@@ -35365,6 +35405,46 @@ THREE.Earth.prototype.updateMatrixWorld = function() {
 	this.uniforms.fCameraHeight2.value = cameraHeight * cameraHeight;
 
 }
+// File:src/objects/LineRibbon.js
+
+THREE.LineRibbon = function( geometry, material ) {
+
+	THREE.Mesh.call( this );
+	
+	this.attributes = {
+
+		displacement: {	type: 'v3', value: [] },
+		customColor: {	type: 'c', value: [] }
+
+	};
+
+	this.uniforms = THREE.UniformsUtils.clone( THREE.UniformsLib.screen );
+	this.uniforms.targetSize.value.set( window.innerWidth, window.innerHeight );
+
+	this.geometry = geometry !== undefined ? geometry : new THREE.Geometry();
+	this.material = material !== undefined ? material : new THREE.ShaderMaterial( {
+
+		uniforms:       this.uniforms,
+		attributes:     this.attributes,
+		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_vertex' ],
+		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
+		side:           THREE.DoubleSide,
+		blend:          THREE.AdditiveBlending,
+		depthTest:      false,
+		transparent:    true
+
+	} );
+
+	for ( var i = 0; i < this.geometry.segments; ++i ) {
+
+
+
+	}
+
+}
+
+THREE.LineRibbon.prototype = Object.create( THREE.Mesh.prototype );
+THREE.LineRibbon.prototype.constructor = THREE.LineRibbon;
 // File:src/objects/shaders/Constants.js
 
 THREE.Constants = {
@@ -35384,7 +35464,7 @@ THREE.Constants = {
 
 	}
 
-}
+};
 // File:src/objects/shaders/earth_atmosphere_fragment.glsl
 
 THREE.ShaderChunk[ 'earth_atmosphere_fragment' ] ="//\n// Atmospheric scattering fragment shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n\nuniform vec3 v3LightPos;\nuniform float g;\nuniform float g2;\n\nuniform float fMultiplier;\n\nvarying vec3 v3Direction;\nvarying vec3 c0;\nvarying vec3 c1;\n\n// Calculates the Mie phase function\nfloat getMiePhase(float fCos, float fCos2, float g, float g2)\n{\n\treturn 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCos2) / pow(1.0 + g2 - 2.0 * g * fCos, 1.5);\n}\n\n// Calculates the Rayleigh phase function\nfloat getRayleighPhase(float fCos2)\n{\n\treturn 0.75 + 0.75 * fCos2;\n}\n\nvoid main (void)\n{\n\tfloat fCos = dot(v3LightPos, v3Direction) / length(v3Direction);\n\tfloat fCos2 = fCos * fCos;\n\n\tvec3 color =\tgetRayleighPhase(fCos2) * c0 +\n\t\t\t\t\tgetMiePhase(fCos, fCos2, g, g2) * c1;\n\n \tgl_FragColor = vec4(fMultiplier * fMultiplier * color, 1.0);\n\tgl_FragColor.a = gl_FragColor.b;\n}";
@@ -35401,39 +35481,53 @@ THREE.ShaderChunk[ 'earth_ground_fragment' ] ="//\n// Atmospheric scattering fra
 
 THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering vertex shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n// Ported for use with three.js/WebGL by James Baicoianu\n\nuniform vec3 v3LightPosition;\t\t// The direction vector to the light source\nuniform vec3 v3InvWavelength;\t// 1 / pow(wavelength, 4) for the red, green, and blue channels\nuniform float fCameraHeight;\t// The camera's current height\nuniform float fCameraHeight2;\t// fCameraHeight^2\nuniform float fOuterRadius;\t\t// The outer (atmosphere) radius\nuniform float fOuterRadius2;\t// fOuterRadius^2\nuniform float fInnerRadius;\t\t// The inner (planetary) radius\nuniform float fInnerRadius2;\t// fInnerRadius^2\nuniform float fKrESun;\t\t\t// Kr * ESun\nuniform float fKmESun;\t\t\t// Km * ESun\nuniform float fKr4PI;\t\t\t// Kr * 4 * PI\nuniform float fKm4PI;\t\t\t// Km * 4 * PI\nuniform float fScale;\t\t\t// 1 / (fOuterRadius - fInnerRadius)\nuniform float fScaleDepth;\t\t// The scale depth (i.e. the altitude at which the atmosphere's average density is found)\nuniform float fScaleOverScaleDepth;\t// fScale / fScaleDepth\nuniform sampler2D tDiffuse;\n\nvarying vec3 c0;\nvarying vec3 c1;\nvarying vec3 vNormal;\nvarying vec2 vUv;\n\nconst int nSamples = 3;\nconst float fSamples = 3.0;\n\nfloat scale(float fCos)\n{\n\tfloat x = 1.0 - fCos;\n\treturn fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));\n}\n\nvoid main(void)\n{\n\t// Get the ray from the camera to the vertex and its length (which is the far point of the ray passing through the atmosphere)\n\tvec3 v3Ray = position - cameraPosition;\n\tfloat fFar = length(v3Ray);\n\tv3Ray /= fFar;\n\n\t// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)\n\tfloat B = 2.0 * dot(cameraPosition, v3Ray);\n\tfloat C = fCameraHeight2 - fOuterRadius2;\n\tfloat fDet = max(0.0, B*B - 4.0 * C);\n\tfloat fNear = 0.5 * (-B - sqrt(fDet));\n\n\t// Calculate the ray's starting position, then calculate its scattering offset\n\tvec3 v3Start = cameraPosition + v3Ray * fNear;\n\tfFar -= fNear;\n\tfloat fDepth = exp((fInnerRadius - fOuterRadius) / fScaleDepth);\n\tfloat fCameraAngle = dot(-v3Ray, position) / length(position);\n\tfloat fLightAngle = dot(v3LightPosition, position) / length(position);\n\tfloat fCameraScale = scale(fCameraAngle);\n\tfloat fLightScale = scale(fLightAngle);\n\tfloat fCameraOffset = fDepth*fCameraScale;\n\tfloat fTemp = (fLightScale + fCameraScale);\n\n\t// Initialize the scattering loop variables\n\tfloat fSampleLength = fFar / fSamples;\n\tfloat fScaledLength = fSampleLength * fScale;\n\tvec3 v3SampleRay = v3Ray * fSampleLength;\n\tvec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;\n\n\t// Now loop through the sample rays\n\tvec3 v3FrontColor = vec3(0.0, 0.0, 0.0);\n\tvec3 v3Attenuate;\n\tfor(int i=0; i<nSamples; i++)\n\t{\n\t\tfloat fHeight = length(v3SamplePoint);\n\t\tfloat fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));\n\t\tfloat fScatter = fDepth*fTemp - fCameraOffset;\n\t\tv3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));\n\t\tv3FrontColor += v3Attenuate * (fDepth * fScaledLength);\n\t\tv3SamplePoint += v3SampleRay;\n\t}\n\n\t// Calculate the attenuation factor for the ground\n\tc0 = v3Attenuate;\n\tc1 = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\t//gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n\t//gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n\tvUv = uv;\n\tvNormal = normal;\n}";
 
+// File:src/objects/shaders/line_ribbon_fragment.glsl
+
+THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(1.0, c, 0, 1.0);\n\n}";
+
+// File:src/objects/shaders/line_ribbon_vertex.glsl
+
+THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\n\nvarying float c;\n\nvoid main(void) {\n\n\tvec3 cam = cross(cameraPosition - position, normal);\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\tvec2 dir = normalize( nor.xy );\n\n\tvec4 pos = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\tc = 1.;//pos.w;\n\tpos.x += uv.x * pos.w * 1. / targetSize.x * dir.x;\n\tpos.y += uv.x * pos.w * 1. / targetSize.y * dir.y;\n\t//pos.x += 0.5;\n\tgl_Position = pos;\n\n}";
+
 // File:src/objects/shaders/UniformsLib.js
 
 THREE.UniformsLib.earth = {
 
-		"v3LightPosition"		: { type: "v3", value: new THREE.Vector3(1e8, 0, 1e8).normalize() },
-		"v3InvWavelength"		: { type: "v3", value: new THREE.Vector3(1 / Math.pow(THREE.Constants.atmosphere.wavelength[0], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[1], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[2], 4)) },
+	"v3LightPosition"		: { type: "v3", value: new THREE.Vector3(1e8, 0, 1e8).normalize() },
+	"v3InvWavelength"		: { type: "v3", value: new THREE.Vector3(1 / Math.pow(THREE.Constants.atmosphere.wavelength[0], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[1], 4), 1 / Math.pow(THREE.Constants.atmosphere.wavelength[2], 4)) },
 
-		"fCameraHeight"			: { type: "f", value: 0 },
-		"fCameraHeight2"		: { type: "f", value: 0 },
+	"fCameraHeight"			: { type: "f", value: 0 },
+	"fCameraHeight2"		: { type: "f", value: 0 },
 
-		"fInnerRadius"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius },
-		"fInnerRadius2"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius * THREE.Constants.atmosphere.innerRadius },
-		"fOuterRadius"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius },
-		"fOuterRadius2"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius * THREE.Constants.atmosphere.outerRadius },
+	"fInnerRadius"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius },
+	"fInnerRadius2"			: { type: "f", value: THREE.Constants.atmosphere.innerRadius * THREE.Constants.atmosphere.innerRadius },
+	"fOuterRadius"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius },
+	"fOuterRadius2"			: { type: "f", value: THREE.Constants.atmosphere.outerRadius * THREE.Constants.atmosphere.outerRadius },
 
-		"fKrESun"				: { type: "f", value: THREE.Constants.atmosphere.Kr * THREE.Constants.atmosphere.ESun },
-		"fKmESun"				: { type: "f", value: THREE.Constants.atmosphere.Km * THREE.Constants.atmosphere.ESun },
-		"fKr4PI"				: { type: "f", value: THREE.Constants.atmosphere.Kr * 4.0 * Math.PI },
-		"fKm4PI"				: { type: "f", value: THREE.Constants.atmosphere.Km * 4.0 * Math.PI },
+	"fKrESun"				: { type: "f", value: THREE.Constants.atmosphere.Kr * THREE.Constants.atmosphere.ESun },
+	"fKmESun"				: { type: "f", value: THREE.Constants.atmosphere.Km * THREE.Constants.atmosphere.ESun },
+	"fKr4PI"				: { type: "f", value: THREE.Constants.atmosphere.Kr * 4.0 * Math.PI },
+	"fKm4PI"				: { type: "f", value: THREE.Constants.atmosphere.Km * 4.0 * Math.PI },
 
-		"fScale"				: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) },
-		"fScaleDepth"			: { type: "f", value: THREE.Constants.atmosphere.scaleDepth },
-		"fScaleOverScaleDepth"	: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) / THREE.Constants.atmosphere.scaleDepth },
+	"fScale"				: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) },
+	"fScaleDepth"			: { type: "f", value: THREE.Constants.atmosphere.scaleDepth },
+	"fScaleOverScaleDepth"	: { type: "f", value: 1 / ( THREE.Constants.atmosphere.outerRadius - THREE.Constants.atmosphere.innerRadius ) / THREE.Constants.atmosphere.scaleDepth },
 
-		"g"						: { type: "f", value: THREE.Constants.atmosphere.g },
-		"g2"					: { type: "f", value: THREE.Constants.atmosphere.g * THREE.Constants.atmosphere.g },
+	"g"						: { type: "f", value: THREE.Constants.atmosphere.g },
+	"g2"					: { type: "f", value: THREE.Constants.atmosphere.g * THREE.Constants.atmosphere.g },
 
-		"nSamples"				: { type: "i", value: 3 },
-		"fSamples"				: { type: "f", value: 3.0 },
-		"tDiffuse"				: { type: "t", value: undefined },
-		"tDiffuseNight"			: { type: "t", value: undefined },
-		"tClouds"				: { type: "t", value: null },
-		"fNightScale"			: { type: "f", value: 1 },
-		"fMultiplier"			: { type: "f", value: 1 },
+	"nSamples"				: { type: "i", value: 3 },
+	"fSamples"				: { type: "f", value: 3.0 },
+	"tDiffuse"				: { type: "t", value: undefined },
+	"tDiffuseNight"			: { type: "t", value: undefined },
+	"tClouds"				: { type: "t", value: null },
+	"fNightScale"			: { type: "f", value: 1 },
+	"fMultiplier"			: { type: "f", value: 1 },
+
+};
+
+THREE.UniformsLib.screen = {
+
+	"targetSize" : { type: "v2", value: new THREE.Vector2( window.innerWidth, window.innerHeight ) }
 
 }
