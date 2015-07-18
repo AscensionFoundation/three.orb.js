@@ -40,9 +40,7 @@
 	<body>
 
 		<div id="container"></div>
-		<div id="info"><a href="http://orbjs.org" target="_blank">three.orb.js</a> template - blank<br/>
-		<b>S</b> spherical <b>M</b> mercator
-		</div>
+		<div id="info"><a href="http://orbjs.org" target="_blank">three.orb.js</a> template - blank</div>
 
 		<script src="../build/three.orb.js"></script>
 
@@ -64,10 +62,16 @@
 
 		<script>
 
-			var camera, scene, renderer, uniforms;
-			var mesh;
-			var activeMaterial, meractorMaterial, sphericalMaterial;
+			var camera, scene, renderer;
+			var mesh, geometry;
 			var r;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			var square = 100;
 
 			init();
 			animate();
@@ -86,47 +90,31 @@
 
 				scene = new THREE.Scene();
 
-				var geometry = new THREE.SphereGeometry( 50, 20, 20 );
+				geometry = new THREE.RibbonCollectionGeometry( square * square, 20 );
+				var material = new THREE.MeshBasicMaterial( { 
 
-				var texture = THREE.ImageUtils.loadTexture( '../data/earth.color.jpg' );
-				
-				uniforms = {
-
-					"alpha" : { type: "f", value: 0 },
-					"texture" : { type: "t", value: texture }
-
-				}
-
-				sphericalMaterial = new THREE.ShaderMaterial( { 
-
-					uniforms: uniforms,
-					vertexShader:   THREE.ShaderChunk[ 'unwrap_spherical_vertex' ],
-					fragmentShader: THREE.ShaderChunk[ 'unwrap_fragment' ],
+					color: 0xffffff,
+					side: THREE.DoubleSide,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthWrite: false
 
 				} );
 
-				meractorMaterial = new THREE.ShaderMaterial( { 
-
-					uniforms: uniforms,
-					vertexShader:   THREE.ShaderChunk[ 'unwrap_mercator_vertex' ],
-					fragmentShader: THREE.ShaderChunk[ 'unwrap_fragment' ],
-
-				} );
-
-				texture.anisotropy = renderer.getMaxAnisotropy();
-
-
-				mesh = new THREE.Mesh( geometry, sphericalMaterial );
+				mesh = new THREE.LineRibbon( geometry );
 				scene.add( mesh );
 
 				//
 
+				stats = new Stats();
+				document.body.appendChild( stats.domElement );
+
+				//
+
 				window.addEventListener( 'resize', onWindowResize, false );
-				document.addEventListener( 'keydown', onKeyDown, false );
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
 			}
-
-			//
 
 			function onWindowResize() {
 
@@ -137,23 +125,25 @@
 
 			}
 
-			//
+			function onDocumentMouseMove(event) {
 
-			function onKeyDown ( event ) {
+				var r = Date.now() * 0.0005;
 
-				switch( event.keyCode ) {
+				mouseX = ( event.clientX - windowHalfX ) / 10;
+				mouseY = ( event.clientY - windowHalfY ) / 10;
 
-					case 77: /*M*/
-						mesh.material = meractorMaterial;
-						break;
+				for ( var x = 0; x < square; ++x ) {
 
-					case 83: /*S*/
-						mesh.material = sphericalMaterial;
-						break;
+					for ( var y = 0; y < square; ++y ) {
+
+						geometry.advance( x * square + y, mouseX + 200 / square * x - 100, -mouseY + 200 / square * y - 100, Math.sin(r) * 100 );
+
+					}
 
 				}
 
-			};
+
+			}
 
 			function animate() {
 
@@ -161,16 +151,13 @@
 
 				var r = Date.now() * 0.0005;
 
-
-				//mesh.rotation.y = r;
-				uniforms.alpha.value = Math.sin( r * 0.66 ) * 0.5 + 0.5;
-
 				camera.position.x = Math.sin( r ) * 200;
 				camera.position.z = Math.cos( r ) * 200;
-				camera.position.y = 200;
 				camera.lookAt( mesh.position );
 
 				renderer.render( scene, camera );
+				
+				stats.update();
 
 			}
 

@@ -1,4 +1,4 @@
-THREE.LineRibbon = function( geometry, material ) {
+THREE.SurfaceRibbon = function( geometry, material ) {
 
 	THREE.Mesh.call( this, geometry, material, THREE.TriangleStrip );
 	
@@ -11,13 +11,14 @@ THREE.LineRibbon = function( geometry, material ) {
 
 	this.uniforms = THREE.UniformsUtils.clone( THREE.UniformsLib.screen );
 	this.uniforms.targetSize.value.set( window.innerWidth, window.innerHeight );
+	this.uniforms.lineWidth.value = 2;
 
 	this.geometry = geometry !== undefined ? geometry : new THREE.Geometry();
 	this.material = material !== undefined ? material : new THREE.ShaderMaterial( {
 
 		uniforms:       this.uniforms,
 		attributes:     this.attributes,
-		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_vertex' ],
+		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_surface_vertex' ],
 		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
 		//side:           THREE.DoubleSide,
 		blending:          THREE.AdditiveBlending,
@@ -35,5 +36,5 @@ THREE.LineRibbon = function( geometry, material ) {
 
 }
 
-THREE.LineRibbon.prototype = Object.create( THREE.Mesh.prototype );
-THREE.LineRibbon.prototype.constructor = THREE.LineRibbon;
+THREE.SurfaceRibbon.prototype = Object.create( THREE.Mesh.prototype );
+THREE.SurfaceRibbon.prototype.constructor = THREE.SurfaceRibbon;

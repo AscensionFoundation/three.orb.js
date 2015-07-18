@@ -4,7 +4,7 @@ uniform float lineWidth;
 void main(void) {
 
 	// perpendicular vector the the line from the camera's perspective
-	vec3 cam = cross(cameraPosition - position, normal);
+	vec3 cam = cross(position, normal);
 
 	// project into clip space
 	vec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );

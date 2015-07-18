@@ -35373,6 +35373,34 @@ THREE.RibbonCollectionGeometry = function( count, segments, duration ) {
 THREE.RibbonCollectionGeometry.prototype = Object.create( THREE.BufferGeometry.prototype );
 THREE.RibbonCollectionGeometry.prototype.constructor = THREE.RibbonCollectionGeometry;
 
+THREE.RibbonCollectionGeometry.prototype.reset = function( index ) {
+
+	var positions = this.positions;
+	this.indices[ index ] = 0;
+
+	var offset = index * ( this.segments + 2 ) * 6;
+
+	for ( var j = 0; j < ( this.segments + 1 ) * 2; ++j ) {
+
+		positions[ j * 3 + 0 + offset ] = NaN;
+		positions[ j * 3 + 1 + offset ] = NaN;
+		positions[ j * 3 + 2 + offset ] = NaN;
+
+	}
+
+	positions[ ( this.segments + 1 ) * 6 + 0 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 1 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 2 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 3 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 4 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 6 + offset ] = NaN;
+
+	this.needsReset[ index ] = false;
+
+	this.attributes.position.needsUpdate = true;
+
+}
+
 THREE.RibbonCollectionGeometry.prototype.advance = function( index, x, y, z ) {
 
 	var positions = this.positions;
@@ -35593,9 +35621,10 @@ THREE.LineRibbon = function( geometry, material ) {
 		attributes:     this.attributes,
 		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_vertex' ],
 		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
-		side:           THREE.DoubleSide,
+		//side:           THREE.DoubleSide,
 		blending:          THREE.AdditiveBlending,
-		depthTest:      false,
+		//depthTest:      false,
+		depthWrite: false,
 		transparent:    true
 
 	} );
@@ -35610,6 +35639,48 @@ THREE.LineRibbon = function( geometry, material ) {
 
 THREE.LineRibbon.prototype = Object.create( THREE.Mesh.prototype );
 THREE.LineRibbon.prototype.constructor = THREE.LineRibbon;
+// File:src/objects/SurfaceRibbon.js
+
+THREE.SurfaceRibbon = function( geometry, material ) {
+
+	THREE.Mesh.call( this, geometry, material, THREE.TriangleStrip );
+	
+	this.attributes = {
+
+		displacement: {	type: 'v3', value: [] },
+		customColor: {	type: 'c', value: [] }
+
+	};
+
+	this.uniforms = THREE.UniformsUtils.clone( THREE.UniformsLib.screen );
+	this.uniforms.targetSize.value.set( window.innerWidth, window.innerHeight );
+	this.uniforms.lineWidth.value = 2;
+
+	this.geometry = geometry !== undefined ? geometry : new THREE.Geometry();
+	this.material = material !== undefined ? material : new THREE.ShaderMaterial( {
+
+		uniforms:       this.uniforms,
+		attributes:     this.attributes,
+		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_surface_vertex' ],
+		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
+		//side:           THREE.DoubleSide,
+		blending:          THREE.AdditiveBlending,
+		//depthTest:      false,
+		depthWrite: false,
+		transparent:    true
+
+	} );
+
+	for ( var i = 0; i < this.geometry.segments; ++i ) {
+
+
+
+	}
+
+}
+
+THREE.SurfaceRibbon.prototype = Object.create( THREE.Mesh.prototype );
+THREE.SurfaceRibbon.prototype.constructor = THREE.SurfaceRibbon;
 // File:src/objects/shaders/Constants.js
 
 THREE.Constants = {
@@ -35648,11 +35719,15 @@ THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering verte
 
 // File:src/objects/shaders/line_ribbon_fragment.glsl
 
-THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(0.1, 0.2, 0.4, 1.0);\n\n}";
+THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="void main (void) {\n\n\tgl_FragColor = vec4(0.025, 0.1, 0.4, 1.0);\n\n}";
 
 // File:src/objects/shaders/line_ribbon_vertex.glsl
 
-THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\n\nvarying float c;\n\nvoid main(void) {\n\n\t// perpendicular vector the the line from the camera's perspective\n\tvec3 cam = cross(cameraPosition - position, normal);\n\n\t// project into clip space\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\n\t// normalize into a screen space direction\n\tvec2 dir = normalize( nor.xy );\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t// extrude the lines by the half the pixel with to each direction\n\tgl_Position.xy += uv.x * gl_Position.w * 4. / targetSize * dir;\n\n}";
+THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\nuniform float lineWidth;\n\nvoid main(void) {\n\n\t// perpendicular vector the the line from the camera's perspective\n\tvec3 cam = cross(cameraPosition - position, normal);\n\n\t// project into clip space\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\n\t// normalize into a screen space direction\n\tvec2 dir = normalize( nor.xy );\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t// extrude the lines by the half the pixel with to each direction\n\tgl_Position.xy += lineWidth / 2. * uv.x * gl_Position.w / targetSize * dir;\n\n}";
+
+// File:src/objects/shaders/line_ribbon_surface_vertex.glsl
+
+THREE.ShaderChunk[ 'line_ribbon_surface_vertex' ] ="uniform vec2 targetSize;\nuniform float lineWidth;\n\nvoid main(void) {\n\n\t// perpendicular vector the the line from the camera's perspective\n\tvec3 cam = cross(position, normal);\n\n\t// project into clip space\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\n\t// normalize into a screen space direction\n\tvec2 dir = normalize( nor.xy );\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t// extrude the lines by the half the pixel with to each direction\n\tgl_Position.xy += lineWidth / 2. * uv.x * gl_Position.w / targetSize * dir;\n\n}";
 
 // File:src/objects/shaders/unwrap_fragment.glsl
 
@@ -35705,6 +35780,7 @@ THREE.UniformsLib.earth = {
 
 THREE.UniformsLib.screen = {
 
-	"targetSize" : { type: "v2", value: new THREE.Vector2( window.innerWidth, window.innerHeight ) }
+	"targetSize"	: { type: "v2", value: new THREE.Vector2( window.innerWidth, window.innerHeight ) },
+	"lineWidth"		: { type: "f", value: 4 },
 
 }

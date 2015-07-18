@@ -50,6 +50,34 @@ THREE.RibbonCollectionGeometry = function( count, segments, duration ) {
 THREE.RibbonCollectionGeometry.prototype = Object.create( THREE.BufferGeometry.prototype );
 THREE.RibbonCollectionGeometry.prototype.constructor = THREE.RibbonCollectionGeometry;
 
+THREE.RibbonCollectionGeometry.prototype.reset = function( index ) {
+
+	var positions = this.positions;
+	this.indices[ index ] = 0;
+
+	var offset = index * ( this.segments + 2 ) * 6;
+
+	for ( var j = 0; j < ( this.segments + 1 ) * 2; ++j ) {
+
+		positions[ j * 3 + 0 + offset ] = NaN;
+		positions[ j * 3 + 1 + offset ] = NaN;
+		positions[ j * 3 + 2 + offset ] = NaN;
+
+	}
+
+	positions[ ( this.segments + 1 ) * 6 + 0 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 1 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 2 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 3 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 4 + offset ] = NaN;
+	positions[ ( this.segments + 1 ) * 6 + 6 + offset ] = NaN;
+
+	this.needsReset[ index ] = false;
+
+	this.attributes.position.needsUpdate = true;
+
+}
+
 THREE.RibbonCollectionGeometry.prototype.advance = function( index, x, y, z ) {
 
 	var positions = this.positions;
