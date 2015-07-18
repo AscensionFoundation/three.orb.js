@@ -3,7 +3,7 @@ varying vec2 v_uv;
 
 #define PI 3.1415926535897932384626433832795
 
-void main2(void) {
+void main(void) {
 	vec3 pos = position;
 	float len = length( position );
 

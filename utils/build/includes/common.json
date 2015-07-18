@@ -3,6 +3,7 @@
 	"src/Three.Orb.js",
 	"src/cameras/BlendCamera.js",
 	"src/geometries/RibbonGeometry.js",
+	"src/geometries/RibbonCollectionGeometry.js",
 	"src/math/Matrix4.js",
 	"src/objects/Earth.js",
 	"src/objects/LineRibbon.js",
@@ -11,10 +12,10 @@
 	"src/objects/shaders/earth_atmosphere_vertex.glsl",
 	"src/objects/shaders/earth_ground_fragment.glsl",
 	"src/objects/shaders/earth_ground_vertex.glsl",
-	"src/objects/shaders/earth_unwrap_fragment.glsl",
-	"src/objects/shaders/earth_unwrap_vertex.glsl",
 	"src/objects/shaders/line_ribbon_fragment.glsl",
 	"src/objects/shaders/line_ribbon_vertex.glsl",
+	"src/objects/shaders/unwrap_fragment.glsl",
+	"src/objects/shaders/unwrap_mercator_vertex.glsl",
 	"src/objects/shaders/unwrap_spherical_vertex.glsl",
 	"src/objects/shaders/UniformsLib.js"
 ]

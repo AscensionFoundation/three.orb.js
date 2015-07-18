@@ -2,16 +2,16 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	THREE.BufferGeometry.call( this );
 
-	this.positions = new Float32Array( segments * 3 * 2 );
-	this.normals = new Float32Array( segments * 3 * 2 );
-	this.uvs = new Float32Array( segments * 2 * 2 );
+	this.positions = new Float32Array( ( segments + 1 ) * 3 * 2 );
+	this.normals = new Float32Array( ( segments + 1 ) * 3 * 2 );
+	this.uvs = new Float32Array( ( segments + 1 ) * 2 * 2 );
 	this.addAttribute( 'position', new THREE.DynamicBufferAttribute( this.positions, 3 ) );
 	this.addAttribute( 'normal', new THREE.DynamicBufferAttribute( this.normals, 3 ) );
-	this.addAttribute( 'uv', new THREE.DynamicBufferAttribute( this.uvs, 2 ) );
+	this.addAttribute( 'uv', new THREE.BufferAttribute( this.uvs, 2 ) );
 	this.previous = new THREE.Vector3();
 	this.temp = new THREE.Vector3();
 
-	for ( var i = 0; i < segments; ++i ) {
+	for ( var i = 0; i < segments + 1; ++i ) {
 
 		this.uvs[ i * 4 + 0 ] = 1;
 		this.uvs[ i * 4 + 2 ] = -1;
@@ -20,7 +20,7 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	this.segments = segments;
 	this.duration = duration;
-	this.index = 0;
+	this.index = 1;
 
 }
 
@@ -51,9 +51,25 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	v = v + 1;
 
-	if ( v >= this.segments ) {
+	if ( v > this.segments ) {
 
 		v = 0;
+
+		normals[ v * 6 +  0 ] = t.x;
+		normals[ v * 6 +  1 ] = t.y;
+		normals[ v * 6 +  2 ] = t.z;
+		normals[ v * 6 +  3 ] = t.x;
+		normals[ v * 6 +  4 ] = t.y;
+		normals[ v * 6 +  5 ] = t.z;
+
+		positions[ v * 6 + 0 ] = x;
+		positions[ v * 6 + 1 ] = y;
+		positions[ v * 6 + 2 ] = z;
+		positions[ v * 6 + 3 ] = x;
+		positions[ v * 6 + 4 ] = y;
+		positions[ v * 6 + 5 ] = z;
+
+		v = 1;
 
 	}
 
@@ -63,6 +79,7 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 	positions[ v * 6 + 3 ] = NaN;
 	positions[ v * 6 + 4 ] = NaN;
 	positions[ v * 6 + 5 ] = NaN;
+
 
 	this.index = v;
 	this.attributes.position.needsUpdate = true;

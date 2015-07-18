@@ -72,6 +72,7 @@
 			var container, stats;
 			var camera, scene, renderer, mesh;
 			var cameraRig, activeCamera, activeHelper;
+			var fov = 50;
 			var cameraPerspective, cameraOrtho;
 			var cameraPerspectiveHelper, cameraOrthoHelper;
 			var cameraBlend, cameraBlendHelper;
@@ -88,10 +89,10 @@
 
 				//
 
-				camera = new THREE.PerspectiveCamera( 50, 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+				camera = new THREE.PerspectiveCamera( fov, 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
 				camera.position.z = 2500;
 
-				cameraPerspective = new THREE.PerspectiveCamera( 50, 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT, 150, 1000 );
+				cameraPerspective = new THREE.PerspectiveCamera( fov, 0.5 * SCREEN_WIDTH / SCREEN_HEIGHT, 150, 1000 );
 
 				cameraPerspectiveHelper = new THREE.CameraHelper( cameraPerspective );
 				scene.add( cameraPerspectiveHelper );
@@ -263,7 +264,7 @@
 
 				if ( activeCamera === cameraPerspective ) {
 
-					cameraPerspective.fov = 35 + 30 * Math.sin( 0.5 * r );
+					cameraPerspective.fov = 50;//35 + 30 * Math.sin( 0.5 * r );
 					cameraPerspective.far = mesh.position.length();
 					cameraPerspective.updateProjectionMatrix();
 
@@ -286,15 +287,19 @@
 
 				} else {
 
-					cameraPerspective.fov = 20;
+					var h = THREE.Math.degToRad( fov * 0.5 );
+					var a = Math.tan( h );
+					var v = Math.abs( ( r % 2 ) - 1 );
+
+					cameraPerspective.fov = 50;
 					cameraPerspective.far = mesh.position.length();
 					cameraPerspective.updateProjectionMatrix();
 
 					cameraOrtho.far = mesh.position.length();
 					cameraOrtho.updateProjectionMatrix();
 
-					cameraBlend.alpha = ( Math.sin( r / 2 ) + 1 ) / 2;
-					document.getElementById("info").innerHTML = cameraBlend.alpha + "";
+					cameraBlend.alpha = 1 - 1 / ( Math.tan( Math.PI / 2 * v + h * ( 1 - v ) ) / a );
+					document.getElementById("info").innerHTML = Math.tan( Math.PI / 2 * v + h * ( 1 - v ) ) + "";
 					cameraBlend.updateProjectionMatrix();
 
 					cameraBlendHelper.update();

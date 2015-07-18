@@ -20,7 +20,7 @@ THREE.LineRibbon = function( geometry, material ) {
 		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_vertex' ],
 		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
 		side:           THREE.DoubleSide,
-		blend:          THREE.AdditiveBlending,
+		blending:          THREE.AdditiveBlending,
 		depthTest:      false,
 		transparent:    true
 

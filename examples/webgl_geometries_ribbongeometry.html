@@ -21,12 +21,20 @@
 				position: absolute;
 				top: 0px; width: 100%;
 				padding: 5px;
+				z-index: 100;
 			}
+
 
 			a {
 				color: #ffd802;
 			}
 
+			b { color: lightgreen }
+
+			#stats { position: absolute; top:0; left: 0 }
+			#stats #fps { background: transparent !important }
+			#stats #fps #fpsText { color: #777 !important }
+			#stats #fps #fpsGraph { display: none }
 		</style>
 	</head>
 	<body>
@@ -95,6 +103,11 @@
 
 				//
 
+				stats = new Stats();
+				document.body.appendChild( stats.domElement );
+
+				//
+
 				window.addEventListener( 'resize', onWindowResize, false );
 
 			}
@@ -130,6 +143,8 @@
 				camera.lookAt( mesh.position );
 
 				renderer.render( scene, camera );
+				
+				stats.update();
 
 			}
 

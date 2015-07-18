@@ -35235,16 +35235,16 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	THREE.BufferGeometry.call( this );
 
-	this.positions = new Float32Array( segments * 3 * 2 );
-	this.normals = new Float32Array( segments * 3 * 2 );
-	this.uvs = new Float32Array( segments * 2 * 2 );
+	this.positions = new Float32Array( ( segments + 1 ) * 3 * 2 );
+	this.normals = new Float32Array( ( segments + 1 ) * 3 * 2 );
+	this.uvs = new Float32Array( ( segments + 1 ) * 2 * 2 );
 	this.addAttribute( 'position', new THREE.DynamicBufferAttribute( this.positions, 3 ) );
 	this.addAttribute( 'normal', new THREE.DynamicBufferAttribute( this.normals, 3 ) );
-	this.addAttribute( 'uv', new THREE.DynamicBufferAttribute( this.uvs, 2 ) );
+	this.addAttribute( 'uv', new THREE.BufferAttribute( this.uvs, 2 ) );
 	this.previous = new THREE.Vector3();
 	this.temp = new THREE.Vector3();
 
-	for ( var i = 0; i < segments; ++i ) {
+	for ( var i = 0; i < segments + 1; ++i ) {
 
 		this.uvs[ i * 4 + 0 ] = 1;
 		this.uvs[ i * 4 + 2 ] = -1;
@@ -35253,7 +35253,7 @@ THREE.RibbonGeometry = function( segments, duration ) {
 
 	this.segments = segments;
 	this.duration = duration;
-	this.index = 0;
+	this.index = 1;
 
 }
 
@@ -35284,9 +35284,25 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 
 	v = v + 1;
 
-	if ( v >= this.segments ) {
+	if ( v > this.segments ) {
 
 		v = 0;
+
+		normals[ v * 6 +  0 ] = t.x;
+		normals[ v * 6 +  1 ] = t.y;
+		normals[ v * 6 +  2 ] = t.z;
+		normals[ v * 6 +  3 ] = t.x;
+		normals[ v * 6 +  4 ] = t.y;
+		normals[ v * 6 +  5 ] = t.z;
+
+		positions[ v * 6 + 0 ] = x;
+		positions[ v * 6 + 1 ] = y;
+		positions[ v * 6 + 2 ] = z;
+		positions[ v * 6 + 3 ] = x;
+		positions[ v * 6 + 4 ] = y;
+		positions[ v * 6 + 5 ] = z;
+
+		v = 1;
 
 	}
 
@@ -35297,10 +35313,150 @@ THREE.RibbonGeometry.prototype.advance = function( x, y, z ) {
 	positions[ v * 6 + 4 ] = NaN;
 	positions[ v * 6 + 5 ] = NaN;
 
+
 	this.index = v;
 	this.attributes.position.needsUpdate = true;
 	this.attributes.normal.needsUpdate = true;
 	this.previous.set( x, y, z );
+}
+// File:src/geometries/RibbonCollectionGeometry.js
+
+THREE.RibbonCollectionGeometry = function( count, segments, duration ) {
+
+	THREE.BufferGeometry.call( this );
+
+	var points = count * ( segments + 2 );
+
+	this.positions = new Float32Array( points * 3 * 2 );
+	this.normals = new Float32Array( points * 3 * 2 );
+	this.uvs = new Float32Array( points * 2 * 2 );
+	this.indices = [];
+	this.needsReset = [];
+
+	this.addAttribute( 'position', new THREE.DynamicBufferAttribute( this.positions, 3 ) );
+	this.addAttribute( 'normal', new THREE.DynamicBufferAttribute( this.normals, 3 ) );
+	this.addAttribute( 'uv', new THREE.BufferAttribute( this.uvs, 2 ) );
+
+	this.previous = [];
+	this.temp = new THREE.Vector3();
+
+	for ( var i = 0; i < count; ++i ) {
+
+		this.indices.push( 0 );
+		this.needsReset.push( true );
+		this.previous.push( new THREE.Vector3() );
+
+	}
+
+	for ( var i = 0; i < points; ++i ) {
+
+		this.uvs[ i * 4 + 0 ] = 1;
+		this.uvs[ i * 4 + 2 ] = -1;
+
+	}
+
+	this.computeBoundingSphere();
+
+	for ( var i = 0; i < this.positions.length; ++i ) {
+
+		this.positions[ i ] = 0;
+		this.normals[ i ] = 0;
+
+	}
+
+	this.count = count;
+	this.segments = segments;
+	this.duration = duration;
+
+}
+
+THREE.RibbonCollectionGeometry.prototype = Object.create( THREE.BufferGeometry.prototype );
+THREE.RibbonCollectionGeometry.prototype.constructor = THREE.RibbonCollectionGeometry;
+
+THREE.RibbonCollectionGeometry.prototype.advance = function( index, x, y, z ) {
+
+	var positions = this.positions;
+	var normals = this.normals;
+	var i = this.indices[ index ];
+	var offset = index * ( this.segments + 2 ) * 6;
+	var t = this.temp;
+	t.set(x, y, z).sub(this.previous[ index ]);
+
+	if ( this.needsReset[ index ] ) {
+
+		for ( var j = 0; j < ( this.segments + 1 ) * 2; ++j ) {
+
+			positions[ j * 3 + 0 + offset ] = NaN;
+			positions[ j * 3 + 1 + offset ] = NaN;
+			positions[ j * 3 + 2 + offset ] = NaN;
+
+		}
+
+		positions[ ( this.segments + 1 ) * 6 + 0 + offset ] = NaN;
+		positions[ ( this.segments + 1 ) * 6 + 1 + offset ] = NaN;
+		positions[ ( this.segments + 1 ) * 6 + 2 + offset ] = NaN;
+		positions[ ( this.segments + 1 ) * 6 + 3 + offset ] = NaN;
+		positions[ ( this.segments + 1 ) * 6 + 4 + offset ] = NaN;
+		positions[ ( this.segments + 1 ) * 6 + 6 + offset ] = NaN;
+
+		this.needsReset[ index ] = false;
+
+	}
+
+	var v = i * 6 + offset;
+
+	normals[ v +  0 ] = t.x;
+	normals[ v +  1 ] = t.y;
+	normals[ v +  2 ] = t.z;
+	normals[ v +  3 ] = t.x;
+	normals[ v +  4 ] = t.y;
+	normals[ v +  5 ] = t.z;
+
+	positions[ v + 0 ] = x;
+	positions[ v + 1 ] = y;
+	positions[ v + 2 ] = z;
+	positions[ v + 3 ] = x;
+	positions[ v + 4 ] = y;
+	positions[ v + 5 ] = z;
+
+	i = i + 1;
+
+	if ( i > this.segments ) {
+
+		i = 0;
+
+		var v = i * 6 + offset;
+
+		normals[ v +  0 ] = t.x;
+		normals[ v +  1 ] = t.y;
+		normals[ v +  2 ] = t.z;
+		normals[ v +  3 ] = t.x;
+		normals[ v +  4 ] = t.y;
+		normals[ v +  5 ] = t.z;
+
+		positions[ v + 0 ] = x;
+		positions[ v + 1 ] = y;
+		positions[ v + 2 ] = z;
+		positions[ v + 3 ] = x;
+		positions[ v + 4 ] = y;
+		positions[ v + 5 ] = z;
+
+		i = 1;
+	}
+
+	v = i * 6 + offset;
+
+	positions[ v + 0 ] = NaN;
+	positions[ v + 1 ] = NaN;
+	positions[ v + 2 ] = NaN;
+	positions[ v + 3 ] = NaN;
+	positions[ v + 4 ] = NaN;
+	positions[ v + 5 ] = NaN;
+
+	this.indices[ index ] = i;
+	this.attributes.position.needsUpdate = true;
+	this.attributes.normal.needsUpdate = true;
+	this.previous[ index ].set( x, y, z );
 }
 // File:src/math/Matrix4.js
 
@@ -35324,6 +35480,21 @@ THREE.Matrix4.prototype.lerpMatrices = function( m1, m2, alpha ) {
 	}
 	
 	return this;
+
+}
+
+/**
+ * A projection matrix that allows easy conversion between perspective and orthogonal views
+ * @param parallelism
+ */
+THREE.Matrix4.prototype.makeFocal = function( width, height, parallelism, focal, near, far) {
+
+		var ymax = near * Math.tan( THREE.Math.degToRad( fov * 0.5 ) );
+		var ymin = - ymax;
+		var xmin = ymin * aspect;
+		var xmax = ymax * aspect;
+
+		return this.makeFrustum( xmin, xmax, ymin, ymax, near, far );
 
 }
 // File:src/objects/Earth.js
@@ -35423,7 +35594,7 @@ THREE.LineRibbon = function( geometry, material ) {
 		vertexShader:   THREE.ShaderChunk[ 'line_ribbon_vertex' ],
 		fragmentShader: THREE.ShaderChunk[ 'line_ribbon_fragment' ],
 		side:           THREE.DoubleSide,
-		blend:          THREE.AdditiveBlending,
+		blending:          THREE.AdditiveBlending,
 		depthTest:      false,
 		transparent:    true
 
@@ -35475,25 +35646,25 @@ THREE.ShaderChunk[ 'earth_ground_fragment' ] ="//\n// Atmospheric scattering fra
 
 THREE.ShaderChunk[ 'earth_ground_vertex' ] ="//\n// Atmospheric scattering vertex shader\n//\n// Author: Sean O'Neil\n//\n// Copyright (c) 2004 Sean O'Neil\n//\n// Ported for use with three.js/WebGL by James Baicoianu\n\nuniform vec3 v3LightPosition;\t\t// The direction vector to the light source\nuniform vec3 v3InvWavelength;\t// 1 / pow(wavelength, 4) for the red, green, and blue channels\nuniform float fCameraHeight;\t// The camera's current height\nuniform float fCameraHeight2;\t// fCameraHeight^2\nuniform float fOuterRadius;\t\t// The outer (atmosphere) radius\nuniform float fOuterRadius2;\t// fOuterRadius^2\nuniform float fInnerRadius;\t\t// The inner (planetary) radius\nuniform float fInnerRadius2;\t// fInnerRadius^2\nuniform float fKrESun;\t\t\t// Kr * ESun\nuniform float fKmESun;\t\t\t// Km * ESun\nuniform float fKr4PI;\t\t\t// Kr * 4 * PI\nuniform float fKm4PI;\t\t\t// Km * 4 * PI\nuniform float fScale;\t\t\t// 1 / (fOuterRadius - fInnerRadius)\nuniform float fScaleDepth;\t\t// The scale depth (i.e. the altitude at which the atmosphere's average density is found)\nuniform float fScaleOverScaleDepth;\t// fScale / fScaleDepth\nuniform sampler2D tDiffuse;\n\nvarying vec3 c0;\nvarying vec3 c1;\nvarying vec3 vNormal;\nvarying vec2 vUv;\n\nconst int nSamples = 3;\nconst float fSamples = 3.0;\n\nfloat scale(float fCos)\n{\n\tfloat x = 1.0 - fCos;\n\treturn fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));\n}\n\nvoid main(void)\n{\n\t// Get the ray from the camera to the vertex and its length (which is the far point of the ray passing through the atmosphere)\n\tvec3 v3Ray = position - cameraPosition;\n\tfloat fFar = length(v3Ray);\n\tv3Ray /= fFar;\n\n\t// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)\n\tfloat B = 2.0 * dot(cameraPosition, v3Ray);\n\tfloat C = fCameraHeight2 - fOuterRadius2;\n\tfloat fDet = max(0.0, B*B - 4.0 * C);\n\tfloat fNear = 0.5 * (-B - sqrt(fDet));\n\n\t// Calculate the ray's starting position, then calculate its scattering offset\n\tvec3 v3Start = cameraPosition + v3Ray * fNear;\n\tfFar -= fNear;\n\tfloat fDepth = exp((fInnerRadius - fOuterRadius) / fScaleDepth);\n\tfloat fCameraAngle = dot(-v3Ray, position) / length(position);\n\tfloat fLightAngle = dot(v3LightPosition, position) / length(position);\n\tfloat fCameraScale = scale(fCameraAngle);\n\tfloat fLightScale = scale(fLightAngle);\n\tfloat fCameraOffset = fDepth*fCameraScale;\n\tfloat fTemp = (fLightScale + fCameraScale);\n\n\t// Initialize the scattering loop variables\n\tfloat fSampleLength = fFar / fSamples;\n\tfloat fScaledLength = fSampleLength * fScale;\n\tvec3 v3SampleRay = v3Ray * fSampleLength;\n\tvec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;\n\n\t// Now loop through the sample rays\n\tvec3 v3FrontColor = vec3(0.0, 0.0, 0.0);\n\tvec3 v3Attenuate;\n\tfor(int i=0; i<nSamples; i++)\n\t{\n\t\tfloat fHeight = length(v3SamplePoint);\n\t\tfloat fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));\n\t\tfloat fScatter = fDepth*fTemp - fCameraOffset;\n\t\tv3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));\n\t\tv3FrontColor += v3Attenuate * (fDepth * fScaledLength);\n\t\tv3SamplePoint += v3SampleRay;\n\t}\n\n\t// Calculate the attenuation factor for the ground\n\tc0 = v3Attenuate;\n\tc1 = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\t//gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n\t//gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n\tvUv = uv;\n\tvNormal = normal;\n}";
 
-// File:src/objects/shaders/earth_unwrap_fragment.glsl
-
-THREE.ShaderChunk[ 'earth_unwrap_fragment' ] ="uniform sampler2D texture;\n\nvarying vec2 v_uv;\n\nvoid main(void) {\n\n\tvec3 diffuse = texture2D( texture, v_uv ).xyz;\n\n\t//gl_FragColor = vec4(v_uv.x, v_uv.y, 1.0, 1.0);\n\tgl_FragColor = vec4( diffuse, 1.0);\n}";
-
-// File:src/objects/shaders/earth_unwrap_vertex.glsl
-
-THREE.ShaderChunk[ 'earth_unwrap_vertex' ] ="uniform float alpha;\nvarying vec2 v_uv;\n\n#define PI 3.1415926535897932384626433832795\n\nvec3 hermite( vec3 p1, vec3 p2, vec3 t1, vec3 t2, float a ) {\n\n\tfloat a2 = a * a;\n\tfloat a3 = a2 * a;\n\n\tfloat h1 = 2. * a3 - 3. * a2 + 1.;\n\tfloat h2 = -2. * a3 + 3. * a2;\n\tfloat h3 = a3 - 2. * a2 + a;\n\tfloat h4 = a3 - a2;\n\n\treturn h1 * p1 + h2 * p2 + h3 * t1 + h4 * t2;\n\n}\n\nvoid main( void ) {\n\n\tfloat r = length( position );\n\tvec3 cameraRay = normalize( cameraPosition );\n\n\tfloat cameraLength = length( cameraPosition );\n\tvec3 center = cameraPosition / cameraLength * r;\n\n\tfloat depth = tan( alpha * PI / 2. ) * r;\n\tvec3 origin = -cameraRay * depth;\n\n\tfloat ratio = ( depth + r ) / r;\n\tfloat p = depth + r;\n\n\n\tfloat theta = acos( position.y / r ); // lat up/down [ pi / 2, -pi / 2 ]\n\tfloat phi = atan( position.x, position.z ); // long left/right [ -pi, pi ]\n\n\tfloat ctheta = acos( center.y / r ); // lat up/down\n\tfloat cphi = atan( center.x, center.z ); // long left/right\n\n\tfloat dtheta = ( theta - ctheta );\n\tfloat dphi = ( phi - cphi );\n\n\tdphi = mod( ( dphi ) + PI, 2. * PI ) - PI;\n\n\ttheta = dtheta / ratio + ctheta;\n\tphi = dphi / ratio + cphi;\n\n\tvec3 moved = vec3( p * sin( theta ) * sin( phi ), p * cos( theta ), p * sin( theta ) * cos( phi ));\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( moved + origin , 1.0 );\n\n\tv_uv = uv;\n}";
-
 // File:src/objects/shaders/line_ribbon_fragment.glsl
 
-THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n\n}";
+THREE.ShaderChunk[ 'line_ribbon_fragment' ] ="varying float c;\n\nvoid main (void) {\n\n\tfloat dist = abs(c) * 10.;\n\tfloat alpha = clamp( 8. - dist, 0.0, 1.0);\n\n\tgl_FragColor = vec4(0.1, 0.2, 0.4, 1.0);\n\n}";
 
 // File:src/objects/shaders/line_ribbon_vertex.glsl
 
 THREE.ShaderChunk[ 'line_ribbon_vertex' ] ="uniform vec2 targetSize;\n\nvarying float c;\n\nvoid main(void) {\n\n\t// perpendicular vector the the line from the camera's perspective\n\tvec3 cam = cross(cameraPosition - position, normal);\n\n\t// project into clip space\n\tvec4 nor = projectionMatrix * modelViewMatrix * vec4( cam, 1.0 );\n\n\t// normalize into a screen space direction\n\tvec2 dir = normalize( nor.xy );\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n\n\t// extrude the lines by the half the pixel with to each direction\n\tgl_Position.xy += uv.x * gl_Position.w * 4. / targetSize * dir;\n\n}";
 
+// File:src/objects/shaders/unwrap_fragment.glsl
+
+THREE.ShaderChunk[ 'unwrap_fragment' ] ="uniform sampler2D texture;\n\nvarying vec2 v_uv;\n\nvoid main(void) {\n\n\tvec3 diffuse = texture2D( texture, v_uv ).xyz;\n\n\t//gl_FragColor = vec4(v_uv.x, v_uv.y, 1.0, 1.0);\n\tgl_FragColor = vec4( diffuse, 1.0);\n}";
+
+// File:src/objects/shaders/unwrap_mercator_vertex.glsl
+
+THREE.ShaderChunk[ 'unwrap_mercator_vertex' ] ="uniform float alpha;\nvarying vec2 v_uv;\n\n#define PI 3.1415926535897932384626433832795\n\nvec3 hermite( vec3 p1, vec3 p2, vec3 t1, vec3 t2, float a ) {\n\n\tfloat a2 = a * a;\n\tfloat a3 = a2 * a;\n\n\tfloat h1 = 2. * a3 - 3. * a2 + 1.;\n\tfloat h2 = -2. * a3 + 3. * a2;\n\tfloat h3 = a3 - 2. * a2 + a;\n\tfloat h4 = a3 - a2;\n\n\treturn h1 * p1 + h2 * p2 + h3 * t1 + h4 * t2;\n\n}\n\nvoid main( void ) {\n\n\tfloat r = length( position );\n\tvec3 cameraRay = normalize( cameraPosition );\n\n\tfloat cameraLength = length( cameraPosition );\n\tvec3 center = cameraPosition / cameraLength * r;\n\n\tfloat depth = tan( alpha * PI / 2. ) * r;\n\tvec3 origin = -cameraRay * depth;\n\n\tfloat ratio = ( depth + r ) / r;\n\tfloat p = depth + r;\n\n\n\tfloat theta = acos( position.y / r ); // lat up/down [ pi / 2, -pi / 2 ]\n\tfloat phi = atan( position.x, position.z ); // long left/right [ -pi, pi ]\n\n\tfloat ctheta = acos( center.y / r ); // lat up/down\n\tfloat cphi = atan( center.x, center.z ); // long left/right\n\n\tfloat dtheta = ( theta - ctheta );\n\tfloat dphi = ( phi - cphi );\n\n\tdphi = mod( ( dphi ) + PI, 2. * PI ) - PI;\n\n\ttheta = dtheta / ratio + ctheta;\n\tphi = dphi / ratio + cphi;\n\n\tvec3 moved = vec3( p * sin( theta ) * sin( phi ), p * cos( theta ), p * sin( theta ) * cos( phi ));\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( moved + origin , 1.0 );\n\n\tv_uv = uv;\n}";
+
 // File:src/objects/shaders/unwrap_spherical_vertex.glsl
 
-THREE.ShaderChunk[ 'unwrap_spherical_vertex' ] ="uniform float alpha;\nvarying vec2 v_uv;\n\n#define PI 3.1415926535897932384626433832795\n\nvoid main2(void) {\n\tvec3 pos = position;\n\tfloat len = length( position );\n\n\tfloat cameraLength = length( cameraPosition );\n\tvec3 center = cameraPosition / cameraLength * len;\n\n\tfloat dp = dot( cameraPosition, position ) / len / cameraLength;\n\tfloat ac = acos( dp );\n\tfloat arc = ac * len;\n\n\tvec3 up = cross( cameraPosition - position, center - position );\n\tvec3 perp = normalize(cross( cameraPosition - position, up ));\n\n\tvec3 proj = center + perp * arc;\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( mix( proj, position, alpha ) , 1.0 );\n\n\tv_uv = uv;\n}";
+THREE.ShaderChunk[ 'unwrap_spherical_vertex' ] ="uniform float alpha;\nvarying vec2 v_uv;\n\n#define PI 3.1415926535897932384626433832795\n\nvoid main(void) {\n\tvec3 pos = position;\n\tfloat len = length( position );\n\n\tfloat cameraLength = length( cameraPosition );\n\tvec3 center = cameraPosition / cameraLength * len;\n\n\tfloat dp = dot( cameraPosition, position ) / len / cameraLength;\n\tfloat ac = acos( dp );\n\tfloat arc = ac * len;\n\n\tvec3 up = cross( cameraPosition - position, center - position );\n\tvec3 perp = normalize(cross( cameraPosition - position, up ));\n\n\tvec3 proj = center + perp * arc;\n\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( mix( proj, position, alpha ) , 1.0 );\n\n\tv_uv = uv;\n}";
 
 // File:src/objects/shaders/UniformsLib.js
 
