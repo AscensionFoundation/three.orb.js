@@ -49,16 +49,16 @@
 		<script src="js/libs/jquery.min.js"></script>
 
 		<script>
-
+		/*
 			if ( document.location.hostname === "localhost" || document.location.hostname === "127.0.0.1" ) {
 
 				var script = document.createElement("script");
-				script.src = "js/libs/live.js";
+				//script.src = "js/libs/live.js";
 				script.type = "text/javascript";
 				document.getElementsByTagName("head")[0].appendChild(script);
 
 			}
-
+*/
 		</script>
 
 		<script>
@@ -114,9 +114,19 @@
 
 				scene = new THREE.Scene();
 
+				// geometry = new THREE.LineRibbonCollectionGeometry( particles, 20 );
 				geometry = new THREE.RibbonCollectionGeometry( particles, 20 );
 
 				mesh = new THREE.SurfaceRibbon( geometry );
+				/*
+				mesh = new THREE.Line( geometry, new THREE.LineBasicMaterial({
+					color: 0x080a16,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthWrite: false,
+					linewidth: 2
+				}));
+				*/
 				scene.add( mesh );
 
 				//

@@ -39,3 +39,11 @@ THREE.UniformsLib.screen = {
 	"lineWidth"		: { type: "f", value: 4 },
 
 }
+
+THREE.UniformsLib.distanceField = {
+
+	"threshold"		: { type: "f", value: 0.75 },
+	"gamma"			: { type: "f", value: 0.02 },
+	"texture"		: { type: "t", value: undefined },
+
+}
